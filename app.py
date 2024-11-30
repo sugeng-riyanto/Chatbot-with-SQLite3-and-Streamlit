@@ -4,9 +4,12 @@ import pandas as pd  # Import Pandas for handling Excel files
 
 # Database setup: create and populate the database
 def setup_database():
+    """
+    This function initializes the database and populates it with initial data.
+    """
     # Connect to the SQLite database (or create it if it doesn't exist)
     connection = sqlite3.connect("chatbot.db")
-    cursor = connection.cursor()
+    cursor = connection.cursor()  # Create a cursor object to execute SQL queries
 
     # Create a table named 'questions' if it doesn't exist
     cursor.execute("""
@@ -35,79 +38,87 @@ def setup_database():
 
 # Function to fetch response from the database
 def get_response(user_question):
-    connection = sqlite3.connect("chatbot.db")
-    cursor = connection.cursor()
+    """
+    Fetches the best matching response from the database for a given user question.
+    """
+    connection = sqlite3.connect("chatbot.db")  # Connect to the database
+    cursor = connection.cursor()  # Create a cursor object
+    # Search for a response where the question contains the user's question
     cursor.execute("SELECT response FROM questions WHERE question LIKE ?", (f"%{user_question}%",))
-    result = cursor.fetchone()
-    connection.close()
-    return result[0] if result else "I'm sorry, I don't have an answer for that."
+    result = cursor.fetchone()  # Get the first matching result
+    connection.close()  # Close the connection
+    return result[0] if result else "I'm sorry, I don't have an answer for that."  # Return the result or a default message
 
 # Function to add data from an uploaded Excel file
 def add_data_from_excel(file):
+    """
+    Adds data from an Excel file into the database.
+    """
     try:
         # Read the uploaded Excel file
         data = pd.read_excel(file)
-        # Validate that the required columns exist
+        # Check if the required columns ('question' and 'response') exist
         if "question" in data.columns and "response" in data.columns:
-            connection = sqlite3.connect("chatbot.db")
-            cursor = connection.cursor()
-            # Insert each row from the DataFrame into the database
+            connection = sqlite3.connect("chatbot.db")  # Connect to the database
+            cursor = connection.cursor()  # Create a cursor object
+            # Loop through each row and insert it into the database
             for _, row in data.iterrows():
                 cursor.execute("INSERT INTO questions (question, response) VALUES (?, ?)", (row['question'], row['response']))
-            connection.commit()
-            connection.close()
-            return "Data uploaded successfully!"
+            connection.commit()  # Commit the changes
+            connection.close()  # Close the connection
+            return "Data uploaded successfully!"  # Return success message
         else:
-            return "Invalid file format. Please use the provided template."
+            return "Invalid file format. Please use the provided template."  # Return error if columns are missing
     except Exception as e:
-        return f"An error occurred: {e}"
+        return f"An error occurred: {e}"  # Return any other errors
 
 # Run the setup function to initialize the database
 setup_database()
 
 # Streamlit app setup
-st.title("Chatbot with SQLite3")
-st.write("Ask me a question and I will try to answer based on my database!")
+st.title("Chatbot with SQLite3")  # Set the app title
+st.write("Ask me a question and I will try to answer based on my database!")  # Instructions for the user
 
 # User input
-user_input = st.text_input("Type your question here:")
+user_input = st.text_input("Type your question here:")  # Input field for user question
 
-if user_input:
-    response = get_response(user_input)
-    st.write(f"**Bot:** {response}")
+if user_input:  # Check if the user has entered a question
+    response = get_response(user_input)  # Get the response for the question
+    st.write(f"**Bot:** {response}")  # Display the bot's response
 
 # Admin Panel
-st.sidebar.title("Admin Panel")
-st.sidebar.write("Add new Q&A pairs to the database.")
+st.sidebar.title("Admin Panel")  # Sidebar title for admin functionalities
+st.sidebar.write("Add new Q&A pairs to the database.")  # Instructions for the admin
 
 # Input fields for adding a new question and response
-new_question = st.sidebar.text_input("Enter the question:")
-new_response = st.sidebar.text_area("Enter the response:")
+new_question = st.sidebar.text_input("Enter the question:")  # Field to input a new question
+new_response = st.sidebar.text_area("Enter the response:")  # Field to input a new response
 
-if st.sidebar.button("Add to Database"):
-    if new_question and new_response:
-        connection = sqlite3.connect("chatbot.db")
-        cursor = connection.cursor()
-        cursor.execute("INSERT INTO questions (question, response) VALUES (?, ?)", (new_question, new_response))
-        connection.commit()
-        connection.close()
-        st.sidebar.success("New Q&A added successfully!")
+if st.sidebar.button("Add to Database"):  # Button to add new data to the database
+    if new_question and new_response:  # Ensure both fields are filled
+        connection = sqlite3.connect("chatbot.db")  # Connect to the database
+        cursor = connection.cursor()  # Create a cursor object
+        cursor.execute("INSERT INTO questions (question, response) VALUES (?, ?)", (new_question, new_response))  # Insert data
+        connection.commit()  # Commit the changes
+        connection.close()  # Close the connection
+        st.sidebar.success("New Q&A added successfully!")  # Success message
     else:
-        st.sidebar.error("Both question and response fields are required.")
+        st.sidebar.error("Both question and response fields are required.")  # Error message for missing fields
 
 # Upload Excel file
-st.sidebar.write("Or upload a spreadsheet:")
-uploaded_file = st.sidebar.file_uploader("Upload Excel file (XLSX)", type=["xlsx"])
+st.sidebar.write("Or upload a spreadsheet:")  # Instruction for uploading a file
+uploaded_file = st.sidebar.file_uploader("Upload Excel file (XLSX)", type=["xlsx"])  # File uploader for Excel files
 
-if uploaded_file:
-    message = add_data_from_excel(uploaded_file)
-    st.sidebar.success(message)
+if uploaded_file:  # Check if a file is uploaded
+    message = add_data_from_excel(uploaded_file)  # Process the uploaded file
+    st.sidebar.success(message)  # Display the success or error message
 
 # Provide template for the user
-st.sidebar.write("Download the template:")
-template_data = pd.DataFrame({"question": ["Example question"], "response": ["Example response"]})
-template_file = "template.xlsx"
-template_data.to_excel(template_file, index=False)
+st.sidebar.write("Download the template:")  # Instruction to download the template
+template_data = pd.DataFrame({"question": ["Example question"], "response": ["Example response"]})  # Example template data
+template_file = "template.xlsx"  # File name for the template
+template_data.to_excel(template_file, index=False)  # Save the template as an Excel file
 
+# Button to download the template
 with open(template_file, "rb") as file:
     st.sidebar.download_button("Download Template", file, file_name="template.xlsx")
