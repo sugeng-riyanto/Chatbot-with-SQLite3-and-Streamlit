@@ -1,3 +1,4 @@
 streamlit==1.25.0
 pandas==2.1.2
 openpyxl==3.1.2
+sqlite3-binary==0.0.1
